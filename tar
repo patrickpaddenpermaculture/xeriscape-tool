@@ -1,0 +1,11 @@
+fc-xeriscape-tool/
+  package.json
+  next.config.js
+  .gitignore
+  pages/
+    index.js
+    xeriscape.js
+    api/
+      lookup.js
+      generate.js
+  README.md
