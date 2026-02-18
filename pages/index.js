@@ -1,30 +1,17 @@
 export default function Home() {
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: 24, fontFamily: "system-ui" }}>
-      <h1>Fort Collins Xeriscape Planning Tool</h1>
-      <p style={{ color: "#64748b" }}>
-        Enter an address, fetch Street View + satellite, then generate 3 xeriscape concept images.
+    <div style={{ padding: "40px", fontFamily: "sans-serif" }}>
+      <h1>Fort Collins Xeriscape Planning Tool 🌿</h1>
+      <p>
+        Enter your address or upload a photo to generate a regenerative
+        landscape concept and installation estimate.
       </p>
 
-      <a
-        href="/xeriscape"
-        style={{
-          display: "inline-block",
-          marginTop: 12,
-          background: "#0f766e",
-          color: "#fff",
-          padding: "12px 16px",
-          borderRadius: 12,
-          fontWeight: 800,
-          textDecoration: "none"
-        }}
-      >
-        Open the Tool →
+      <a href="/xeriscape">
+        <button style={{ padding: "12px 20px", marginTop: "20px" }}>
+          Start Designing
+        </button>
       </a>
-
-      <div style={{ marginTop: 18, fontSize: 12, color: "#64748b" }}>
-        MVP: Address-only (no uploads).
-      </div>
     </div>
   );
 }
