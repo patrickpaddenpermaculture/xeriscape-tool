@@ -9,6 +9,38 @@ export default function Xeriscape() {
 
   const [genLoading, setGenLoading] = useState(false);
   const [genImages, setGenImages] = useState([]);
+// inside your component JSX
+
+<label style={{ display: "block", fontWeight: 600, marginTop: 16 }}>
+  Upload Photo (optional)
+</label>
+
+<input
+  type="file"
+  accept="image/*"
+  onChange={(e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // store file in state
+    setUploadFile(file);
+
+    // preview it
+    const url = URL.createObjectURL(file);
+    setUploadPreviewUrl(url);
+  }}
+/>
+
+{uploadPreviewUrl && (
+  <div style={{ marginTop: 12 }}>
+    <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>Preview</div>
+    <img
+      src={uploadPreviewUrl}
+      alt="Upload preview"
+      style={{ maxWidth: 480, width: "100%", borderRadius: 12, border: "1px solid #e5e7eb" }}
+    />
+  </div>
+)}
 
   async function doLookup() {
     setErr("");
