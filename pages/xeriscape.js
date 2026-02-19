@@ -1,192 +1,288 @@
 import { useState } from "react";
+import Link from "next/link";
 
-export default function Xeriscape() {
+export default function XeriscapePage() {
   const [address, setAddress] = useState("");
   const [loadingLookup, setLoadingLookup] = useState(false);
-  const [lookup, setLookup] = useState(null);
-  const [selectedSv, setSelectedSv] = useState("");
-  const [err, setErr] = useState("");
+  const [lookupResult, setLookupResult] = useState(null);
 
-  const [genLoading, setGenLoading] = useState(false);
-  const [genImages, setGenImages] = useState([]);
-// inside your component JSX
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadPreviewUrl, setUploadPreviewUrl] = useState("");
+  const [loadingUpload, setLoadingUpload] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
 
-<label style={{ display: "block", fontWeight: 600, marginTop: 16 }}>
-  Upload Photo (optional)
-</label>
+  const [error, setError] = useState("");
 
-<input
-  type="file"
-  accept="image/*"
-  onChange={(e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function handleLookup() {
+    setError("");
+    setLookupResult(null);
 
-    // store file in state
-    setUploadFile(file);
+    if (!address.trim()) {
+      setError("Please enter an address.");
+      return;
+    }
 
-    // preview it
-    const url = URL.createObjectURL(file);
-    setUploadPreviewUrl(url);
-  }}
-/>
-
-{uploadPreviewUrl && (
-  <div style={{ marginTop: 12 }}>
-    <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>Preview</div>
-    <img
-      src={uploadPreviewUrl}
-      alt="Upload preview"
-      style={{ maxWidth: 480, width: "100%", borderRadius: 12, border: "1px solid #e5e7eb" }}
-    />
-  </div>
-)}
-
-  async function doLookup() {
-    setErr("");
-    setLookup(null);
-    setSelectedSv("");
-    setGenImages([]);
     setLoadingLookup(true);
-
     try {
-      const r = await fetch("/api/lookup", {
+      const res = await fetch("/api/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address })
+        body: JSON.stringify({ address }),
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j?.error || "Lookup failed");
-      setLookup(j);
-      setSelectedSv(j.streetViewUrls?.[0] || "");
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Address not found");
+      }
+
+      setLookupResult(data);
     } catch (e) {
-      setErr(String(e.message || e));
+      setError(e.message || "Lookup failed.");
     } finally {
       setLoadingLookup(false);
     }
   }
 
-  async function generate() {
-    setErr("");
-    setGenImages([]);
-    setGenLoading(true);
+  async function handleUpload() {
+    setError("");
+    setUploadResult(null);
 
+    if (!uploadFile) {
+      setError("Please choose a photo first.");
+      return;
+    }
+
+    setLoadingUpload(true);
     try {
-      const r = await fetch("/api/generate", {
+      const formData = new FormData();
+      // IMPORTANT: field name must be "image" to match /api/upload.js
+      formData.append("image", uploadFile);
+
+      const res = await fetch("/api/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ streetViewUrl: selectedSv })
+        body: formData,
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j?.error || "Generate failed");
-      setGenImages(j.images || []);
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Upload failed");
+      }
+
+      setUploadResult(data);
     } catch (e) {
-      setErr(String(e.message || e));
+      setError(e.message || "Upload failed.");
     } finally {
-      setGenLoading(false);
+      setLoadingUpload(false);
     }
   }
 
   return (
-    <div style={{ maxWidth: 1050, margin: "0 auto", padding: 24, fontFamily: "system-ui" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-        <h1 style={{ margin: 0 }}>Xeriscape AI Tool (MVP)</h1>
-        <a href="/" style={{ color: "#0f766e", fontWeight: 800, textDecoration: "none" }}>
+    <div style={styles.page}>
+      <div style={styles.headerRow}>
+        <div>
+          <h1 style={styles.h1}>Xeriscape AI Tool (MVP)</h1>
+          <p style={styles.sub}>
+            Address-only: fetch Street View + satellite, then generate concept “after”
+            images. (Now also supports photo upload.)
+          </p>
+        </div>
+
+        <Link href="/" style={styles.homeLink}>
           ← Home
-        </a>
+        </Link>
       </div>
 
-      <p style={{ color: "#64748b", marginTop: 8 }}>
-        Address-only: fetch Street View + satellite, then generate 3 concept “after” images.
-      </p>
-
-      <div style={card}>
-        <label style={label}>Address</label>
+      <div style={styles.card}>
+        <label style={styles.label}>Address</label>
         <input
-          style={input}
+          style={styles.input}
+          placeholder="4209 Gemstone Ln, Fort Collins, CO 80525"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder="123 Main St, Fort Collins, CO"
         />
 
-        <button style={btn} onClick={doLookup} disabled={!address || loadingLookup}>
-          {loadingLookup ? "Fetching views…" : "Fetch Street View + Satellite"}
+        <button
+          style={styles.button}
+          onClick={handleLookup}
+          disabled={loadingLookup}
+        >
+          {loadingLookup ? "Fetching..." : "Fetch Street View + Satellite"}
         </button>
 
-        {err && <div style={{ marginTop: 10, color: "#b91c1c", fontWeight: 700 }}>{err}</div>}
+        {lookupResult && (
+          <div style={styles.resultBox}>
+            <div style={styles.resultTitle}>Lookup Result</div>
+            <pre style={styles.pre}>{JSON.stringify(lookupResult, null, 2)}</pre>
+          </div>
+        )}
+
+        <hr style={styles.hr} />
+
+        <label style={styles.label}>Upload Photo (optional)</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            setError("");
+            setUploadResult(null);
+
+            const file = e.target.files?.[0];
+            if (!file) {
+              setUploadFile(null);
+              setUploadPreviewUrl("");
+              return;
+            }
+
+            setUploadFile(file);
+            const url = URL.createObjectURL(file);
+            setUploadPreviewUrl(url);
+          }}
+        />
+
+        {uploadPreviewUrl && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>
+              Preview
+            </div>
+            <img
+              src={uploadPreviewUrl}
+              alt="Upload preview"
+              style={styles.previewImg}
+            />
+          </div>
+        )}
+
+        <button
+          style={{ ...styles.button, marginTop: 14 }}
+          onClick={handleUpload}
+          disabled={loadingUpload}
+        >
+          {loadingUpload ? "Uploading..." : "Upload Photo"}
+        </button>
+
+        {uploadResult && (
+          <div style={styles.resultBox}>
+            <div style={styles.resultTitle}>Upload Result</div>
+            <pre style={styles.pre}>{JSON.stringify(uploadResult, null, 2)}</pre>
+          </div>
+        )}
+
+        {error && <div style={styles.error}>{error}</div>}
       </div>
 
-      {lookup && (
-        <div style={card}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-            <h2 style={{ margin: 0 }}>Views</h2>
-            <div style={{ fontSize: 12, color: "#64748b" }}>
-              Found: <b>{lookup.formatted}</b>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
-            {(lookup.streetViewUrls || []).map((u, idx) => (
-              <button
-                key={u}
-                onClick={() => setSelectedSv(u)}
-                style={{
-                  border: selectedSv === u ? "2px solid #0f766e" : "1px solid #e2e8f0",
-                  borderRadius: 14,
-                  padding: 8,
-                  background: "#fff",
-                  cursor: "pointer",
-                  textAlign: "left"
-                }}
-              >
-                <img src={u} alt={`Street View ${idx + 1}`} style={{ width: "100%", borderRadius: 12 }} />
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
-                  Street View angle {idx + 1} {selectedSv === u ? "(selected)" : ""}
-                </div>
-              </button>
-            ))}
-
-            <div style={{ border: "1px solid #e2e8f0", borderRadius: 14, padding: 8, background: "#fff" }}>
-              <img src={lookup.satelliteUrl} alt="Satellite" style={{ width: "100%", borderRadius: 12 }} />
-              <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>Satellite view</div>
-            </div>
-          </div>
-
-          <button style={btn} onClick={generate} disabled={!selectedSv || genLoading} title={!selectedSv ? "Select a Street View image first" : ""}>
-            {genLoading ? "Generating…" : "Generate 3 Xeriscape Concepts"}
-          </button>
-
-          <div style={{ marginTop: 10, fontSize: 12, color: "#64748b" }}>
-            Tip: If Street View is weird, try a nearby address or one with a clearer front yard.
-          </div>
-        </div>
-      )}
-
-      {genImages.length > 0 && (
-        <div style={card}>
-          <h2 style={{ marginTop: 0 }}>AI Concepts</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
-            {genImages.map((img, idx) => (
-              <div key={idx} style={{ border: "1px solid #e2e8f0", borderRadius: 14, padding: 8, background: "#fff" }}>
-                <img src={img} alt={`Concept ${idx + 1}`} style={{ width: "100%", borderRadius: 12 }} />
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>Concept {idx + 1}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <div style={styles.footerNote}>
+        Next step: wire “Generate Designs” to your image-generation API once lookup or
+        upload succeeds.
+      </div>
     </div>
   );
 }
 
-const card = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 16,
-  padding: 16,
-  marginTop: 14,
-  boxShadow: "0 6px 18px rgba(15,23,42,.06)"
+const styles = {
+  page: {
+    padding: "40px 24px",
+    maxWidth: 1100,
+    margin: "0 auto",
+    fontFamily:
+      'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
+  },
+  headerRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 16,
+    marginBottom: 18,
+  },
+  h1: {
+    fontSize: 44,
+    lineHeight: 1.1,
+    margin: 0,
+    letterSpacing: "-0.02em",
+  },
+  sub: {
+    marginTop: 10,
+    marginBottom: 0,
+    fontSize: 18,
+    opacity: 0.75,
+  },
+  homeLink: {
+    textDecoration: "none",
+    fontWeight: 700,
+    color: "#1f6f62",
+    fontSize: 18,
+    paddingTop: 10,
+    whiteSpace: "nowrap",
+  },
+  card: {
+    border: "1px solid #e5e7eb",
+    borderRadius: 24,
+    padding: 26,
+    background: "white",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.04)",
+  },
+  label: {
+    display: "block",
+    fontWeight: 700,
+    marginBottom: 8,
+  },
+  input: {
+    width: "100%",
+    padding: "14px 16px",
+    borderRadius: 14,
+    border: "1px solid #e5e7eb",
+    fontSize: 16,
+    outline: "none",
+    marginBottom: 14,
+  },
+  button: {
+    background: "#1f6f62",
+    color: "white",
+    border: "none",
+    borderRadius: 16,
+    padding: "14px 18px",
+    fontSize: 18,
+    fontWeight: 800,
+    cursor: "pointer",
+    width: "fit-content",
+  },
+  error: {
+    marginTop: 14,
+    color: "#b42318",
+    fontWeight: 800,
+    fontSize: 16,
+  },
+  hr: {
+    margin: "22px 0",
+    border: "none",
+    borderTop: "1px solid #eef2f7",
+  },
+  previewImg: {
+    maxWidth: 520,
+    width: "100%",
+    borderRadius: 14,
+    border: "1px solid #e5e7eb",
+  },
+  resultBox: {
+    marginTop: 16,
+    borderRadius: 14,
+    border: "1px solid #e5e7eb",
+    background: "#fafafa",
+    padding: 14,
+  },
+  resultTitle: {
+    fontWeight: 900,
+    marginBottom: 10,
+  },
+  pre: {
+    margin: 0,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    fontSize: 12,
+    lineHeight: 1.4,
+  },
+  footerNote: {
+    marginTop: 16,
+    fontSize: 13,
+    opacity: 0.7,
+  },
 };
-const label = { fontSize: 12, color: "#64748b" };
-const input = { width: "100%", padding: 12, borderRadius: 12, border: "1px solid #e2e8f0", marginTop: 6 };
-const btn = { marginTop: 12, background: "#0f766e", color: "#fff", border: 0, padding: "12px 14px", borderRadius: 12, fontWeight: 800, cursor: "pointer" };
